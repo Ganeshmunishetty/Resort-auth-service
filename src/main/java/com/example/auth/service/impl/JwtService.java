@@ -1,44 +1,60 @@
 package com.example.auth.service.impl;
 
-import java.util.Date;
-
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
+import java.security.Key;
+import java.util.Date;
 
 @Component
-@RequiredArgsConstructor
 public class JwtService {
 
-	@Value("${jwt.secret}")
-	private String jwtSecret;
+    @Value("${jwt.secret}")
+    private String jwtSecret;
 
-	@Value("${jwt.expiration}")
-	private long jwtExpirationMs;
+    @Value("${jwt.expirationMs}") // ✅ match your properties
+    private long jwtExpirationMs;
 
-	public String generateToken(String email, String role) {
-		return Jwts.builder().setSubject(email).claim("role", role).setIssuedAt(new Date())
-				.setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-				.signWith(SignatureAlgorithm.HS256, jwtSecret).compact();
-	}
+    private Key key;
 
-	public boolean validateToken(String token) {
-		try {
-			Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token);
-			return true;
-		} catch (Exception e) {
-			return false;
-		}
-	}
+    @PostConstruct
+    public void init() {
+        if (jwtSecret.getBytes().length < 32) {
+            // auto-generate strong key if secret is too short
+            key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+        } else {
+            key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        }
+    }
 
-	public String getEmail(String token) {
-		return Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token).getBody().getSubject();
-	}
+    public String generateToken(String email, String role) {
+        return Jwts.builder()
+                .setSubject(email)
+                .claim("role", role)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
 
-	public String getRole(String token) {
-		return (String) Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token).getBody().get("role");
-	}
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public String getEmail(String token) {
+        return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody().getSubject();
+    }
+
+    public String getRole(String token) {
+        return (String) Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody().get("role");
+    }
 }

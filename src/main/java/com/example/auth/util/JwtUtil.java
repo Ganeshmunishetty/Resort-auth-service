@@ -17,17 +17,22 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expirationMs}")
+    @Value("${jwt.expirationMs}")  // ✅ matches application.properties
     private long expirationMs;
 
     private Key key;
 
     @PostConstruct
     public void init() {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+        // ✅ make sure the key is strong enough for HS256
+        if (secret.getBytes().length < 32) {
+            // auto-generate a strong key if secret is weak
+            key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+        } else {
+            key = Keys.hmacShaKeyFor(secret.getBytes());
+        }
     }
 
-    // ✅ FIXED — now accepts role
     public String generateToken(String username, String role) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expirationMs);
@@ -41,17 +46,14 @@ public class JwtUtil {
                 .compact();
     }
 
-    // ✅ username
     public String extractUsername(String token) {
         return getClaims(token).getSubject();
     }
 
-    // ✅ role extraction (NEW)
     public String extractRole(String token) {
         return getClaims(token).get("role", String.class);
     }
 
-    // ✅ validation
     public boolean validateToken(String token) {
         try {
             Claims claims = getClaims(token);
@@ -61,7 +63,6 @@ public class JwtUtil {
         }
     }
 
-    // ✅ internal
     private Claims getClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
