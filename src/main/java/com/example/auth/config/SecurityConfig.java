@@ -4,8 +4,8 @@ import com.example.auth.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @RequiredArgsConstructor
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -21,28 +22,28 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
 
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            .authorizeHttpRequests(auth -> auth
+                .authorizeHttpRequests(auth -> auth
 
-                // ✅ PUBLIC ENDPOINTS (VERY IMPORTANT)
-                .requestMatchers("/api/auth/register/**").permitAll()
-                .requestMatchers("/api/auth/login/**").permitAll()
+                        // ✅ PUBLIC ENDPOINTS
+                        .requestMatchers("/api/auth/register/**").permitAll()
+                        .requestMatchers("/api/auth/login/**").permitAll()
 
-                // ✅ ROLE BASED
-                .requestMatchers("/api/auth/user/**").hasAuthority("USER")
-                .requestMatchers("/api/auth/owner/**").hasAuthority("OWNER")
-                .requestMatchers("/api/auth/admin/**").hasAuthority("ADMIN")
+                        // ✅ ROLE BASED
+                        .requestMatchers("/api/auth/user/**").hasAuthority("USER")
+                        .requestMatchers("/api/auth/owner/**").hasAuthority("OWNER")
+                        .requestMatchers("/api/auth/admin/**").hasAuthority("ADMIN")
 
-                // ✅ everything else secured
-                .anyRequest().authenticated()
-            )
+                        .anyRequest().authenticated()
+                )
 
-            // ✅ JWT filter
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // ✅ JWT FILTER
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

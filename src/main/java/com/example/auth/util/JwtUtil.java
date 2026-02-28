@@ -21,14 +21,13 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expirationMs}")  // ✅ matches application.properties
+    @Value("${jwt.expirationMs}")
     private long expirationMs;
 
     private Key key;
 
     @PostConstruct
     public void init() {
-        // ✅ ensure the key is strong enough for HS256
         if (secret.getBytes().length < 32) {
             key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
         } else {
@@ -57,6 +56,11 @@ public class JwtUtil {
         return getClaims(token).get("role", String.class);
     }
 
+    public List<GrantedAuthority> getAuthorities(String token) {
+        String role = extractRole(token);
+        return Collections.singletonList(new SimpleGrantedAuthority(role));
+    }
+
     public boolean validateToken(String token) {
         try {
             Claims claims = getClaims(token);
@@ -72,11 +76,5 @@ public class JwtUtil {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-    }
-
-    // ✅ Converts role claim to GrantedAuthority for Spring Security
-    public List<GrantedAuthority> getAuthorities(String token) {
-        String role = extractRole(token);
-        return Collections.singletonList(new SimpleGrantedAuthority(role));
     }
 }
