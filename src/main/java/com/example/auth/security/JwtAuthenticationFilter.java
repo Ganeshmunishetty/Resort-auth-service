@@ -1,6 +1,5 @@
 package com.example.auth.security;
 
-import com.example.auth.security.CustomUserDetailsService;
 import com.example.auth.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,68 +7,70 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private final CustomUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
 
-        String header = request.getHeader("Authorization");
+        String path = request.getServletPath();
 
-        // ✅ No token
-        if (header == null || !header.startsWith("Bearer ")) {
+        // ✅ Skip public endpoints
+        if (path.startsWith("/api/auth/register") || path.startsWith("/api/auth/login")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = header.substring(7);
+        final String authHeader = request.getHeader("Authorization");
+
+        // ✅ If no token → continue (SecurityConfig will block if needed)
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         try {
-            String username = jwtUtil.extractUsername(token);
+            String token = authHeader.substring(7);
 
-            if (username != null &&
-                    SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (jwtUtil.validateToken(token)) {
 
-                UserDetails userDetails =
-                        userDetailsService.loadUserByUsername(username);
+                String username = jwtUtil.extractUsername(token);
+                String role = jwtUtil.extractRole(token);
 
-                if (jwtUtil.validateToken(token)) {
+                // ✅ Only set if not already authenticated
+                if (SecurityContextHolder.getContext().getAuthentication() == null) {
 
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    userDetails,
+                                    username,
                                     null,
-                                    userDetails.getAuthorities()
+                                    List.of(new SimpleGrantedAuthority(role))
                             );
 
                     authToken.setDetails(
-                            new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
+                            new WebAuthenticationDetailsSource().buildDetails(request)
                     );
 
-                    SecurityContextHolder.getContext()
-                            .setAuthentication(authToken);
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
 
-        } catch (Exception ex) {
-            // invalid token — ignore and continue
+        } catch (Exception e) {
+            // optional: log if needed
         }
 
         filterChain.doFilter(request, response);

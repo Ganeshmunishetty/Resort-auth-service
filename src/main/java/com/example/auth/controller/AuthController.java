@@ -1,9 +1,12 @@
 package com.example.auth.controller;
 
-import com.example.auth.dto.*;
+import com.example.auth.dto.AuthResponse;
+import com.example.auth.dto.LoginRequest;
+import com.example.auth.dto.RegisterRequest;
 import com.example.auth.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -12,6 +15,10 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+
+    // ----------------------
+    // Registration Endpoints
+    // ----------------------
 
     // USER registration
     @PostMapping("/register/user")
@@ -33,7 +40,11 @@ public class AuthController {
         authService.register(request, "ADMIN", true);
         return "Admin registered successfully";
     }
-    
+
+    // ----------------------
+    // Login Endpoints
+    // ----------------------
+
     @PostMapping("/login/user")
     public AuthResponse loginUser(@RequestBody LoginRequest request) {
         return authService.login(request, "USER");
@@ -48,4 +59,27 @@ public class AuthController {
     public AuthResponse loginAdmin(@RequestBody LoginRequest request) {
         return authService.login(request, "ADMIN");
     }
+
+    // ----------------------
+    // Protected Endpoints
+    // ----------------------
+
+    @GetMapping("/user/profile")
+    public String getUserProfile(Authentication authentication) {
+        String email = authentication.getName();
+        return "USER Profile: email=" + email;
+    }
+
+    @GetMapping("/owner/profile")
+    public String getOwnerProfile(Authentication authentication) {
+        String email = authentication.getName();
+        return "OWNER Profile: email=" + email;
+    }
+
+    @GetMapping("/admin/profile")
+    public String getAdminProfile(Authentication authentication) {
+        String email = authentication.getName();
+        return "ADMIN Profile: email=" + email;
+    }
 }
+

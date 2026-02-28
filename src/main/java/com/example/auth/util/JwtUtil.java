@@ -6,10 +6,14 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class JwtUtil {
@@ -24,9 +28,8 @@ public class JwtUtil {
 
     @PostConstruct
     public void init() {
-        // ✅ make sure the key is strong enough for HS256
+        // ✅ ensure the key is strong enough for HS256
         if (secret.getBytes().length < 32) {
-            // auto-generate a strong key if secret is weak
             key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
         } else {
             key = Keys.hmacShaKeyFor(secret.getBytes());
@@ -69,5 +72,11 @@ public class JwtUtil {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    // ✅ Converts role claim to GrantedAuthority for Spring Security
+    public List<GrantedAuthority> getAuthorities(String token) {
+        String role = extractRole(token);
+        return Collections.singletonList(new SimpleGrantedAuthority(role));
     }
 }
