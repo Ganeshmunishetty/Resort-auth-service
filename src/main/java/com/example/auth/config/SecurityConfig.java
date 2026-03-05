@@ -1,5 +1,7 @@
 package com.example.auth.config;
 
+import com.example.auth.filter.RateLimitFilter;
+import com.example.auth.filter.SecurityHeadersFilter;
 import com.example.auth.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +19,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
+    private final SecurityHeadersFilter securityHeadersFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -33,6 +37,17 @@ public class SecurityConfig {
                         // ✅ PUBLIC ENDPOINTS
                         .requestMatchers("/api/auth/register/**").permitAll()
                         .requestMatchers("/api/auth/login/**").permitAll()
+                        .requestMatchers("/api/auth/forgot-password/**").permitAll()
+                        .requestMatchers("/api/auth/reset-password/**").permitAll()
+
+                        // ✅ ACTUATOR
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+
+                        // ✅ API DOCUMENTATION
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+
+                        // ✅ ADMIN ENDPOINTS
+                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
 
                         // ✅ ROLE BASED
                         .requestMatchers("/api/auth/user/**").hasAuthority("USER")
@@ -41,6 +56,12 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
+
+                // ✅ SECURITY HEADERS FILTER (first)
+                .addFilterBefore(securityHeadersFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // ✅ RATE LIMIT FILTER
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
 
                 // ✅ JWT FILTER
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

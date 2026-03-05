@@ -1,2 +1,0 @@
-hi this is new test
-hello i want to still check my auth service app

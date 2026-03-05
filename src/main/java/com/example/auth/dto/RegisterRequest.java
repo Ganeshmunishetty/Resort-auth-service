@@ -26,6 +26,10 @@ public class RegisterRequest {
     @Pattern(regexp = "^[0-9]{10}$", message = "Phone must be 10 digits")
     private String phoneNumber;
     
+    @NotBlank(message = "Country code is required")
+    @Pattern(regexp = "^\\+[0-9]{1,4}$", message = "Country code must start with + and be 1-4 digits")
+    private String countryCode;
+    
     @NotBlank(message = "Gender is required")
     private String gender;
 }

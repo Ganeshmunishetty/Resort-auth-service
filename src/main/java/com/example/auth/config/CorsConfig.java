@@ -1,38 +1,47 @@
 package com.example.auth.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 public class CorsConfig {
+
+    @Value("${cors.allowed.origins:http://localhost:5173,http://localhost:3000}")
+    private String allowedOrigins;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        // ✅ allow React dev server
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        // ✅ Configure allowed origins from environment
+        config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
 
-        // ✅ allow methods
+        // ✅ Allowed methods
         config.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
         );
 
-        // ✅ VERY IMPORTANT for Authorization header
+        // ✅ Allowed headers (Authorization is critical for JWT)
         config.setAllowedHeaders(List.of("*"));
 
-        // ✅ allow cookies if needed
+        // ✅ Expose headers
+        config.setExposedHeaders(List.of("X-Rate-Limit-Remaining", "X-Rate-Limit-Retry-After-Seconds"));
+
+        // ✅ Allow credentials (cookies, authorization headers)
         config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+        // ✅ Cache preflight response for 1 hour
+        config.setMaxAge(3600L);
 
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
         return source;

@@ -6,9 +6,9 @@ public interface AuthService {
 
     AuthResponse register(RegisterRequest request, String role, boolean autoApprove);
 
-    AuthResponse login(LoginRequest request, String expectedRole);
+    AuthResponse login(LoginRequest request, String expectedRole, String ipAddress);
 
-    String forgotPassword(ForgotPasswordRequest request);
+    String requestPasswordReset(ForgotPasswordRequest request);
     
-    
+    String resetPassword(PasswordResetRequest request);
 }
